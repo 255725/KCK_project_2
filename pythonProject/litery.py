@@ -65,36 +65,41 @@ while cap.isOpened():
             l_arm_angle = calculate_angle(l_shoulder, l_elbow, l_wrist)
             r_arm_angle = calculate_angle(r_shoulder, r_elbow, r_wrist)
 
-            eps = 0.12  # Tolerancja położenia
-            straight = 155  # Próg dla wyprostowanej ręki
+            # --- STAŁE PARAMETRY TOLERANCJI ---
+            eps = 0.15  # Standardowy margines (np. dla wysokości rąk w T i L)
+            eps_narrow = 0.12  # Wąski margines dla litery I (ręce blisko bioder)
+            straight = 145  # Próg kąta (im mniejszy, tym łatwiej o detekcję przy zgiętych łokciach)
 
-            # 3. Logika rozpoznawania (heurystyka)
+            # --- LOGIKA ROZPOZNAWANIA LITER ---
 
-            # --- Litera I (Ciało pionowe, ręce blisko) ---
-            # Poprawka: sprawdzamy czy ręce są proste i blisko tułowia (wąsko w osi X)
-            if (l_arm_angle > straight and r_arm_angle > straight and
-                    abs(l_wrist.x - l_shoulder.x) < eps and abs(r_wrist.x - r_shoulder.x) < eps):
-                current_letter = "I"
-                color = (0, 255, 0)
-
-            # --- Litera T (Ramiona poziomo, nogi złączone) ---
-            # Poprawka: ręce proste i na wysokości ramion (oś Y)
-            elif (l_arm_angle > straight and r_arm_angle > straight and
-                  abs(l_wrist.y - l_shoulder.y) < eps and abs(r_wrist.y - r_shoulder.y) < eps):
-                current_letter = "T"
-                color = (0, 255, 0)
-
-            # --- Litera Y (Ramiona do góry V, nogi złączone) ---
-            # Poprawka: Nadgarstki powyżej ramion i szerzej niż barki
-            elif (l_arm_angle > straight and r_arm_angle > straight and
-                  l_wrist.y < l_shoulder.y and r_wrist.y < r_shoulder.y and
-                  l_wrist.x < l_shoulder.x and r_wrist.x > r_shoulder.x):
+            # 1. Litera Y: Obie ręce wyprostowane i uniesione W GÓRĘ
+            # Jeśli nadgarstki są powyżej barków (y_wrist < y_shoulder), to uznajemy to za Y
+            if (l_arm_angle > straight + 5 and r_arm_angle > straight + 5 and
+                    l_wrist.y < l_shoulder.y and r_wrist.y < r_shoulder.y):
                 current_letter = "Y"
                 color = (0, 255, 0)
 
-            # --- Litera L (Lewa noga vertical, prawa horiz, obie proste) ---
-            # Poprawka zgodnie z poleceniem: Prawa ręka góra, lewa bok poziomo
-            elif (r_wrist.y < r_shoulder.y and abs(r_wrist.x - r_shoulder.x) < eps and
+            # 2. Litera I: Obie ręce wyprostowane W DÓŁ (wzdłuż tułowia)
+            # Nadgarstki muszą być poniżej barków i blisko osi ciała (mały eps_narrow)
+            elif (l_arm_angle > straight and r_arm_angle > straight and
+                  l_wrist.y > l_shoulder.y and r_wrist.y > r_shoulder.y and
+                  abs(l_wrist.x - l_shoulder.x) < eps_narrow and
+                  abs(r_wrist.x - r_shoulder.x) < eps_narrow):
+                current_letter = "I"
+                color = (0, 255, 0)
+
+            # 3. Litera T: Obie ręce wyprostowane POZIOMO
+            # Nadgarstki na wysokości barków (różnica y mniejsza niż eps)
+            elif (l_arm_angle > straight and r_arm_angle > straight and
+                  abs(l_wrist.y - l_shoulder.y) < eps and
+                  abs(r_wrist.y - r_shoulder.y) < eps):
+                current_letter = "T"
+                color = (0, 255, 0)
+
+            # 4. Litera L: Prawa ręka w górę (na ekranie lewo), lewa ręka poziomo (na ekranie prawo)
+            # Uwaga: sprawdzamy czy r_wrist jest nad barkiem, a l_wrist na wysokości barku
+            elif (r_arm_angle > straight and l_arm_angle > straight and
+                  r_wrist.y < r_shoulder.y and abs(r_wrist.x - r_shoulder.x) < eps and
                   abs(l_wrist.y - l_shoulder.y) < eps and l_wrist.x < l_shoulder.x):
                 current_letter = "L"
                 color = (0, 255, 0)
